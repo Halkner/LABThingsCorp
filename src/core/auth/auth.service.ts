@@ -19,7 +19,7 @@ export class AuthService {
     private userRepository: Repository<User>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  async create(createUserDto: CreateUserDto): Promise<any> {
     const existingUser = await this.userRepository.findOne({
       where: { email: createUserDto.email },
     });
