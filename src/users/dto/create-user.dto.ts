@@ -59,7 +59,6 @@ export class CreateUserDto {
     @IsString()
     @MinLength(8)
     @MaxLength(20)
-    @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_])[A-Za-z\d@$!%*?&_]{8,}$/, { message: 'password too weak' })
     readonly confirmPassword: string;
 
     @IsString()
