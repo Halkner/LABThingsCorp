@@ -10,6 +10,7 @@ import { HttpStatus } from '@nestjs/common/enums';
 import { JwtService } from '@nestjs/jwt/dist';
 import { Inject } from '@nestjs/common/decorators';
 import { plainToClass } from 'class-transformer';
+import { ChangePasswordDto } from 'src/users/dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -64,5 +65,23 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       user_info: payload
     };
+  }
+
+  async changePassword(changePasswordDto: ChangePasswordDto): Promise<string> {
+    const user = await this.userRepository.findOne({ where: {email: changePasswordDto.email} });
+    if (!user) {
+        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    const isMatched = await compare(changePasswordDto.oldPassword, user.password);
+    if (!isMatched) {
+        throw new HttpException('Invalid current password', HttpStatus.BAD_REQUEST);
+    }
+
+    const hashedPassword = await hash(changePasswordDto.newPassword, 10);
+    user.password = hashedPassword;
+
+    await this.userRepository.save(user);
+    return 'Password changed successfully';
   }
 }
