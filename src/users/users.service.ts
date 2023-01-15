@@ -13,6 +13,8 @@ export class UsersService {
       ) {}
 
     async getUserProfile(userId: number): Promise<User>{
-        return await this.userRepository.findOne({where: {id: userId}, relations: ['address']});
+        const user = await this.userRepository.findOne({where: {id: userId}, relations: ['address']});
+        delete user.password;
+        return user;
       }
 }
