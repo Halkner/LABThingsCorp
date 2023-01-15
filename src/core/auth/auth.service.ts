@@ -39,7 +39,7 @@ export class AuthService {
     return await this.userRepository.save(user);
   }
 
-  async login(loginDto: LoginDto): Promise<string> {
+  async login(loginDto: LoginDto): Promise<object> {
     const user = await this.userRepository.findOne({
       where: { email: loginDto.email },
     });
@@ -60,8 +60,9 @@ export class AuthService {
       url: user.url,
     };
 
-    const token = await this.jwtService.sign(payload);
-
-    return token;
+    return {
+      access_token: this.jwtService.sign(payload),
+      user_info: payload
+    };
   }
 }

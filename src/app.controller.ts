@@ -18,8 +18,7 @@ export class AppController {
 
   @Post('/auth/login')
   async login(@Body(ValidationPipe) loginDto: LoginDto) {
-      const token = await this.authService.login(loginDto);
-      return { message: 'User logged in successfully', token };
+      return await this.authService.login(loginDto);
   }
 
 
