@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm/repository/Repository';
 import { hash, compare } from 'bcrypt';
 import { Address } from '../../users/entities/address.entity';
-import { HttpException } from '@nestjs/common/exceptions';
+import { BadRequestException, HttpException } from '@nestjs/common/exceptions';
 import { HttpStatus } from '@nestjs/common/enums';
 import { JwtService } from '@nestjs/jwt/dist';
 import { Inject } from '@nestjs/common/decorators';
@@ -27,6 +27,10 @@ export class AuthService {
 
     if (existingUser) {
       throw new HttpException('User already exists', HttpStatus.CONFLICT);
+    }
+
+    if (createUserDto.password !== createUserDto.confirmPassword) {
+      throw new BadRequestException("password and password confirmation do not match");
     }
 
     const addressDto = createUserDto.address;
@@ -71,6 +75,10 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: {email: changePasswordDto.email} });
     if (!user) {
         throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    if(changePasswordDto.newPassword !== changePasswordDto.confirmNewPassword) {
+      throw new BadRequestException("password and password confirmation do not match");
     }
 
     const isMatched = await compare(changePasswordDto.oldPassword, user.password);
