@@ -43,7 +43,7 @@ export class CreateUserDto {
     @IsString()
     @IsUrl()
     @IsOptional()
-    readonly url: string;
+    readonly photoUrl: string;
 
     @IsEmail(undefined, {message: "Invalid e-mail."})
     @IsString()

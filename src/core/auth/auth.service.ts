@@ -3,13 +3,11 @@ import { CreateUserDto } from '../../users/dto/create-user.dto';
 import { User } from '../../users/entities/user.entity';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm/repository/Repository';
-import { hash, compare } from 'bcrypt';
+import * as bcrypt from 'bcrypt';
 import { Address } from '../../users/entities/address.entity';
-import { BadRequestException, HttpException } from '@nestjs/common/exceptions';
-import { HttpStatus } from '@nestjs/common/enums';
+import { UnauthorizedException } from '@nestjs/common/exceptions';
 import { JwtService } from '@nestjs/jwt/dist';
 import { Inject } from '@nestjs/common/decorators';
-import { plainToClass } from 'class-transformer';
 import { ChangePasswordDto } from 'src/users/dto/change-password.dto';
 
 @Injectable()
@@ -18,76 +16,140 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject('USER_REPOSITORY')
     private userRepository: Repository<User>,
+    @Inject('ADDRESS_REPOSITORY')
+    private addressRepository: Repository<Address>,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<any> {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
+  async register(createUserDto: CreateUserDto): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        const { fullName, email, photoUrl, phone, address, password } =
+          createUserDto;
+
+        const newUser = this.userRepository.create();
+        const newAddress = this.addressRepository.create();
+
+        newUser.fullName = fullName;
+        newUser.email = email;
+        newUser.photoUrl = photoUrl;
+        newUser.phone = phone;
+        newUser.salt = await bcrypt.genSalt(12);
+        newUser.password = await this.hashPassword(password, newUser.salt);
+        newUser.userAddress = newAddress;
+
+        newAddress.city = address.city;
+        newAddress.zipCode = address.zipCode;
+        newAddress.street = address.street;
+        newAddress.neighborhood = address.neighborhood;
+        newAddress.houseNumber = address.houseNumber;
+        newAddress.state = address.state;
+        newAddress.complement = address.complement;
+
+        const user = await this.userRepository.save(newUser);
+        await this.addressRepository.save(newAddress);
+
+        delete user.password;
+
+        resolve({ message: 'User created successfully!' });
+      } catch (err) {
+        reject(err);
+      }
     });
-
-    if (existingUser) {
-      throw new HttpException('User already exists', HttpStatus.CONFLICT);
-    }
-
-    if (createUserDto.password !== createUserDto.confirmPassword) {
-      throw new BadRequestException("password and password confirmation do not match");
-    }
-
-    const addressDto = createUserDto.address;
-
-    const user = plainToClass(User, createUserDto);
-    const address = plainToClass(Address, addressDto);
-    user.address = address;
-
-    user.password = await hash(user.password, 10);
-
-    return await this.userRepository.save(user);
   }
 
-  async login(loginDto: LoginDto): Promise<object> {
+  private async hashPassword(password: string, salt: string): Promise<string> {
+    return bcrypt.hash(password, salt);
+  }
+
+  async login(loginDto: LoginDto) {
+    return await new Promise(async (resolve, reject) => {
+      try {
+        const user = await this.checkCredentials(loginDto);
+
+        if (user === null) {
+          throw new UnauthorizedException('Invalid credentials');
+        }
+
+        const jwtPayload = {
+          id: user.id,
+          name: user.fullName,
+          email: user.email,
+          photoUrl: user.photoUrl,
+        };
+
+        const token = await this.jwtService.sign(jwtPayload);
+
+        resolve({ token, user, message: 'User logged in successfully!' });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  private async checkCredentials(loginDto: LoginDto) {
+    const { email, password } = loginDto;
     const user = await this.userRepository.findOne({
-      where: { email: loginDto.email },
+      where: { email: email, is_active: true },
+      relations: { userAddress: true },
     });
 
-    if (!user) {
-      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    if (user && (await user.checkPassword(password))) {
+      delete user.password;
+      delete user.salt;
+      return user;
     }
 
-    const isPasswordValid = await compare(loginDto.password, user.password);
-    if (!isPasswordValid) {
-      throw new HttpException('Invalid password', HttpStatus.UNAUTHORIZED);
+    return null;
+  }
+
+  validateToken(jwtToken: string) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        resolve(
+          await this.jwtService.verifyAsync(jwtToken, {
+            ignoreExpiration: false,
+          }),
+        );
+      } catch (error) {
+        reject({
+          code: 401,
+          detail: 'JWT expired.',
+        });
+      }
+    });
+  }
+
+  decodedToken(jwtToken: string) {
+    return this.jwtService.decode(jwtToken);
+  }
+
+  verifyUser(requestId: string, userId: string) {
+    if (requestId != userId) {
+      throw new UnauthorizedException({
+        success: false,
+        message:
+          'Error: The user in the request does not match the logged-in user.',
+      });
     }
-
-    const payload = {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      url: user.url,
-    };
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      user_info: payload
-    };
+    return;
   }
 
   async changePassword(changePasswordDto: ChangePasswordDto): Promise<string> {
-    const user = await this.userRepository.findOne({ where: {email: changePasswordDto.email} });
+    const { email, oldPassword, newPassword } = changePasswordDto;
+
+    const user = await this.checkCredentials({ email, password: oldPassword });
+
     if (!user) {
-        throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    if(changePasswordDto.newPassword !== changePasswordDto.confirmNewPassword) {
-      throw new BadRequestException("password and password confirmation do not match");
-    }
+    user.salt = await bcrypt.genSalt(12);
+    user.password = await this.hashPassword(newPassword, user.salt);
 
-    const isMatched = await compare(changePasswordDto.oldPassword, user.password);
-    if (!isMatched) {
-        throw new HttpException('Invalid current password', HttpStatus.BAD_REQUEST);
-    }
+    await this.userRepository.save(user);
 
-    const hashedPassword = await hash(changePasswordDto.newPassword, 10);
-    user.password = hashedPassword;
+    delete user.password;
+    delete user.salt;
 
     await this.userRepository.save(user);
     return 'Password changed successfully';
