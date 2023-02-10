@@ -1,7 +1,5 @@
-import { Type } from 'class-transformer';
-import { Length, ValidateNested, IsUrl } from 'class-validator';
+import { Length, IsUrl } from 'class-validator';
 import { IsNotEmpty, IsString } from 'class-validator';
-import { DeviceInfoDto } from './device-info.dto';
 
 export class CreateDeviceDto {
     @IsNotEmpty()
@@ -22,9 +20,4 @@ export class CreateDeviceDto {
     @IsNotEmpty()
     @IsUrl()
     photoUrl: string;
-
-    @ValidateNested()
-    @IsNotEmpty()
-    @Type(() => DeviceInfoDto)
-    info: DeviceInfoDto;
 }
