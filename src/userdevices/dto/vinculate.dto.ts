@@ -1,18 +1,16 @@
-import { IsBoolean, IsInt, IsString } from 'class-validator';
-export class VinculateDto{
 
-    @IsInt()
-    user: number;
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
-    @IsInt()
-    device: number;
+export class VinculateDeviceDto {
+  @IsNumber()
+  @IsNotEmpty()
+  deviceId: number;
 
-    @IsBoolean()
-    is_on: boolean;
+  @IsNumber()
+  @IsNotEmpty()
+  locationId: number;
 
-    @IsString()
-    local: string;
-
-    @IsString()
-    room: string;
+  @IsString()
+  @IsNotEmpty()
+  room: string;
 }

@@ -1,47 +1,32 @@
-import { User } from './user.entity';
-import { IsString, IsOptional, IsNotEmpty } from 'class-validator';
-import { Column, PrimaryGeneratedColumn, Entity, OneToOne } from "typeorm";
+import { Users } from './user.entity';
+import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
-@Entity({name: 'addresses'})
+@Entity({ name: 'addresses' })
 export class Address {
+  @PrimaryGeneratedColumn()
+  addressId: number;
 
-    @PrimaryGeneratedColumn()
-    id: number;
+  @Column()
+  zipCode: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Column()
-    street: string;
+  @Column()
+  street: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Column({name: 'zip_code'})
-    zipCode: string;
+  @Column()
+  houseNumber: number;
 
-    @IsNotEmpty()
-    @Column({name: 'house_number'})
-    houseNumber: number;
+  @Column()
+  neighborhood: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Column()
-    neighborhood: string;
+  @Column()
+  state: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Column()
-    city: string;
+  @Column()
+  city: string;
 
-    @IsNotEmpty()
-    @IsString()
-    @Column()
-    state: string;
+  @Column({ nullable: true })
+  complement: string;
 
-    @IsOptional()
-    @IsString()
-    @Column({nullable: true})
-    complement: string;
-
-    @OneToOne(() => User, address => Address)
-    user: User;
+  @OneToOne(() => Users, (user) => user.userId)
+  user: Users;
 }

@@ -9,10 +9,9 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { MatchesOtherField } from 'src/core/constraints/matches-other-field.decorator';
 import { Type } from 'class-transformer';
 
-export class CreateUserDto {
+export class UpdateUserDto {
   @IsString()
   @MinLength(5)
   @MaxLength(50)
@@ -28,18 +27,6 @@ export class CreateUserDto {
   @IsEmail()
   @IsNotEmpty()
   readonly email: string;
-
-  @IsString()
-  @MinLength(8)
-  @IsNotEmpty()
-  readonly password: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MatchesOtherField('password', {
-    message: 'confirmPassword field must match password field',
-  })
-  readonly confirmPassword: string;
 
   @IsString()
   @IsOptional()

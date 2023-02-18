@@ -1,6 +1,6 @@
 import { LoginDto } from '../../users/dto/login.dto';
 import { CreateUserDto } from '../../users/dto/create-user.dto';
-import { User } from '../../users/entities/user.entity';
+import { Users } from '../../users/entities/user.entity';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm/repository/Repository';
 import * as bcrypt from 'bcrypt';
@@ -15,7 +15,7 @@ export class AuthService {
   constructor(
     private jwtService: JwtService,
     @Inject('USER_REPOSITORY')
-    private userRepository: Repository<User>,
+    private userRepository: Repository<Users>,
     @Inject('ADDRESS_REPOSITORY')
     private addressRepository: Repository<Address>,
   ) {}
@@ -35,7 +35,7 @@ export class AuthService {
         newUser.phone = phone;
         newUser.salt = await bcrypt.genSalt(12);
         newUser.password = await this.hashPassword(password, newUser.salt);
-        newUser.userAddress = newAddress;
+        newUser.address = newAddress;
 
         newAddress.city = address.city;
         newAddress.zipCode = address.zipCode;
@@ -71,7 +71,7 @@ export class AuthService {
         }
 
         const jwtPayload = {
-          id: user.id,
+          id: user.userId,
           name: user.fullName,
           email: user.email,
           photoUrl: user.photoUrl,
@@ -89,8 +89,8 @@ export class AuthService {
   private async checkCredentials(loginDto: LoginDto) {
     const { email, password } = loginDto;
     const user = await this.userRepository.findOne({
-      where: { email: email, is_active: true },
-      relations: { userAddress: true },
+      where: { email: email },
+      relations: { address: true },
     });
 
     if (user && (await user.checkPassword(password))) {

@@ -1,30 +1,43 @@
+import { Devices } from 'src/devices/entities/devices.entity';
+import { Users } from 'src/users/entities/user.entity';
 import {
   Column,
   Entity,
+  JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
-import { Devices } from 'src/devices/entities/devices.entity';
+import { LocationEntity } from './location.entity';
 
 @Entity({ name: 'user_devices' })
 export class UserDevices {
-  
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn({ name: 'user_device_id' })
+  userDeviceId: number;
 
-  @ManyToOne(type => User)
-  user: User;
-
-  @ManyToOne(type => Devices)
-  device: Devices;
-
-  @Column()
-  local: string;
-
-  @Column()
-  is_on: boolean;
+  @Column({ default: false, name: 'is_on' })
+  isOn: boolean;
 
   @Column()
   room: string;
+
+  @ManyToOne(() => Users, (user) => user.userDevices, {
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
+  @JoinColumn({ name: 'user_id' })
+  user: Users;
+
+  @ManyToOne(() => Devices, (device) => device.userDevices, {
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
+  @JoinColumn({ name: 'device_id' })
+  device: Devices;
+
+  @ManyToOne(() => LocationEntity, (location) => location.userDevices, {
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
+  @JoinColumn({ name: 'location_id' })
+  location: LocationEntity;
 }

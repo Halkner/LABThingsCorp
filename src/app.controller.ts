@@ -1,47 +1,64 @@
+import { Get } from '@nestjs/common/decorators';
 import { JwtAuthGuard } from './core/auth/guards/jwt-auth.guard';
 import { Body, Post, Controller, Patch, UseGuards } from '@nestjs/common';
 import { AuthService } from './core/auth/auth.service';
 import { ChangePasswordDto } from './users/dto/change-password.dto';
 import { CreateUserDto } from './users/dto/create-user.dto';
 import { LoginDto } from './users/dto/login.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger/dist';
+import {
+  HttpException,
+  UnauthorizedException,
+} from '@nestjs/common/exceptions';
+import { HttpStatus } from '@nestjs/common/enums';
+import { UsersService } from './users/users.service';
 
 @Controller()
 export class AppController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+      private readonly authService: AuthService,
+      private readonly usersService: UsersService,
+    ) {}
 
-  @ApiOperation({
-    summary: 'Create a user',
-    description:
-      'Create a user with a username and password. Returns a JWT token to be used for authentication.',
-  })
-  @ApiResponse({ status: 201, description: 'User created successfully' })
-  @Post('/auth/signup')
+  @Post('/auth/register')
   async signUp(@Body() createUserDto: CreateUserDto) {
-    await this.authService.create(createUserDto);
-    return { message: 'User created successfully' };
+    try {
+      const newUser = await this.authService.register(createUserDto);
+
+      return newUser;
+    } catch (error) {
+      if (error.code == 23505) {
+        throw new HttpException(
+          { statusCode: 409, reason: error?.detail, error_code: error?.code },
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw new HttpException(
+        { reason: error?.detail, code: error?.code },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
-  @ApiOperation({
-    summary: 'Login',
-    description:
-      'Login with a username and password. Returns a JWT token to be used for authentication.',
-  })
-  @ApiResponse({ status: 200, description: 'Login successful' })
   @Post('/auth/login')
   async login(@Body() loginDto: LoginDto) {
-    return await this.authService.login(loginDto);
+    try {
+      return await this.authService.login(loginDto);
+    } catch (error) {
+      if (!error) {
+        throw new UnauthorizedException('Invalid email and/or password');
+      }
+      throw new HttpException({ error }, HttpStatus.BAD_REQUEST);
+    }
   }
 
-  @ApiOperation({
-    summary: 'Change password',
-    description:
-      'Change password for a user. Returns a JWT token to be used for authentication.',
-  })
-  @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @UseGuards(JwtAuthGuard)
   @Patch('/auth/change-password')
   async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
     return this.authService.changePassword(changePasswordDto);
+  }
+
+  @Get('/locals')
+  async getLocals() {
+    return this.usersService.getLocals();
   }
 }
