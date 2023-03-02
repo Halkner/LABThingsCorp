@@ -4,7 +4,6 @@ import { Users } from '../../users/entities/user.entity';
 import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm/repository/Repository';
 import * as bcrypt from 'bcrypt';
-import { Address } from '../../users/entities/address.entity';
 import { UnauthorizedException } from '@nestjs/common/exceptions';
 import { JwtService } from '@nestjs/jwt/dist';
 import { Inject } from '@nestjs/common/decorators';
@@ -16,41 +15,22 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject('USER_REPOSITORY')
     private userRepository: Repository<Users>,
-    @Inject('ADDRESS_REPOSITORY')
-    private addressRepository: Repository<Address>,
   ) {}
 
   async register(createUserDto: CreateUserDto): Promise<any> {
     return new Promise(async (resolve, reject) => {
       try {
-        const { fullName, email, photoUrl, phone, address, password } =
-          createUserDto;
-
-        const newUser = this.userRepository.create();
-        const newAddress = this.addressRepository.create();
-
-        newUser.fullName = fullName;
-        newUser.email = email;
-        newUser.photoUrl = photoUrl;
-        newUser.phone = phone;
-        newUser.salt = await bcrypt.genSalt(12);
+        const { password } = createUserDto;
+        const newUser = this.userRepository.create(createUserDto);
+        newUser.salt = await bcrypt.genSalt(14);
         newUser.password = await this.hashPassword(password, newUser.salt);
-        newUser.address = newAddress;
-
-        newAddress.city = address.city;
-        newAddress.zipCode = address.zipCode;
-        newAddress.street = address.street;
-        newAddress.neighborhood = address.neighborhood;
-        newAddress.houseNumber = address.houseNumber;
-        newAddress.state = address.state;
-        newAddress.complement = address.complement;
 
         const user = await this.userRepository.save(newUser);
-        await this.addressRepository.save(newAddress);
 
         delete user.password;
+        delete newUser.salt;
 
-        resolve({ message: 'User created successfully!' });
+        resolve('User created successfully');
       } catch (err) {
         reject(err);
       }

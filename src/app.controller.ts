@@ -11,14 +11,31 @@ import {
 } from '@nestjs/common/exceptions';
 import { HttpStatus } from '@nestjs/common/enums';
 import { UsersService } from './users/users.service';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiBody,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+} from '@nestjs/swagger';
 
 @Controller()
 export class AppController {
   constructor(
-      private readonly authService: AuthService,
-      private readonly usersService: UsersService,
-    ) {}
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiCreatedResponse({
+    description: 'The user has been successfully registered.',
+  })
+  @ApiBadRequestResponse({ description: 'Invalid request payload.' })
+  @ApiConflictResponse({
+    description: 'The email address is already registered.',
+  })
   @Post('/auth/register')
   async signUp(@Body() createUserDto: CreateUserDto) {
     try {
@@ -52,6 +69,17 @@ export class AppController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Change the user password',
+  })
+  @ApiBody({
+    type: ChangePasswordDto,
+    description: 'Data to change the user password',
+  })
+  @ApiOkResponse({
+    description: 'Returns the updated user data',
+  })
+  @ApiBearerAuth()
   @Patch('/auth/change-password')
   async changePassword(@Body() changePasswordDto: ChangePasswordDto) {
     return this.authService.changePassword(changePasswordDto);

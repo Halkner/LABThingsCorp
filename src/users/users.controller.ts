@@ -1,17 +1,20 @@
 import { HttpStatus } from '@nestjs/common/enums';
-import { Controller, Req, Body } from '@nestjs/common';
+import { Controller, Body } from '@nestjs/common';
 import { Get, Put, Request, Param } from '@nestjs/common/decorators';
 import { HttpException } from '@nestjs/common/exceptions';
-import { AuthService } from 'src/core/auth/auth.service';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Users } from './entities/user.entity';
 
 @Controller('users')
+@ApiTags('users')
 export class UsersController {
-  constructor(
-    private readonly usersService: UsersService,
-  ) {}
+  constructor(private readonly usersService: UsersService) {}
 
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User found.', type: Users })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   @Get('/:id')
   async findOne(@Request() request) {
     try {
@@ -21,6 +24,9 @@ export class UsersController {
     }
   }
 
+  @ApiOperation({ summary: 'Update user by ID' })
+  @ApiResponse({ status: 200, description: 'User updated.', type: Users })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
   @Put(':userId')
   async update(
     @Param('userId') userId: number,
@@ -34,6 +40,4 @@ export class UsersController {
       throw new HttpException({ error }, HttpStatus.BAD_REQUEST);
     }
   }
-
-  
 }
